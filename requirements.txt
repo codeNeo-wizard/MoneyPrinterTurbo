@@ -18,3 +18,4 @@ requests==2.33.1
 socksio==1.0.0
 pydub==0.25.1
 litellm==1.60.0
+onnxruntime==1.23.2 ; sys_platform == 'darwin' and platform_machine == 'x86_64'
