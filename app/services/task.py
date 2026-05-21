@@ -1,6 +1,9 @@
 import math
+import os
 import os.path
 import re
+import shutil
+from datetime import datetime, timezone
 from os import path
 
 from loguru import logger
@@ -11,6 +14,51 @@ from app.models.schema import VideoConcatMode, VideoParams
 from app.services import llm, material, subtitle, video, voice, upload_post
 from app.services import state as sm
 from app.utils import utils
+
+
+def backup_cache_videos_to_utc_folder():
+    cache_dir = utils.storage_dir("cache_videos")
+    if not os.path.isdir(cache_dir):
+        logger.info("cache_videos directory not found, skip backup")
+        return []
+
+    backup_root = utils.storage_dir("cache_videos_bak", create=True)
+    utc_timestamp = datetime.now().astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_dir = path.join(backup_root, utc_timestamp)
+    if os.path.exists(backup_dir):
+        backup_dir = path.join(
+            backup_root,
+            f"{utc_timestamp}-{utils.get_uuid(remove_hyphen=True)[:8]}",
+        )
+
+    shutil.copytree(cache_dir, backup_dir)
+
+    backup_paths = []
+    renamed_index = 1
+    for current_root, _, filenames in os.walk(backup_dir):
+        for filename in sorted(filenames):
+            source_file = path.join(current_root, filename)
+            extension = path.splitext(filename)[1]
+            if extension.lower() == ".mp4":
+                backup_paths.append(source_file)
+                continue
+            target_file = path.join(
+                current_root, f"{utc_timestamp}-{renamed_index:03d}{extension}"
+            )
+            while os.path.exists(target_file):
+                renamed_index += 1
+                target_file = path.join(
+                    current_root, f"{utc_timestamp}-{renamed_index:03d}{extension}"
+                )
+            os.rename(source_file, target_file)
+            backup_paths.append(target_file)
+            renamed_index += 1
+
+    shutil.rmtree(cache_dir)
+    logger.info(
+        f"backed up cache_videos to {backup_dir} and removed original cache directory"
+    )
+    return backup_paths
 
 
 def generate_script(task_id, params):
@@ -38,7 +86,7 @@ def generate_terms(task_id, params, video_script):
     video_terms = params.video_terms
     if not video_terms:
         video_terms = llm.generate_terms(
-            video_subject=params.video_subject, video_script=video_script, amount=5
+            video_subject=params.video_subject, video_script=video_script, amount=20
         )
     else:
         if isinstance(video_terms, str):
@@ -367,6 +415,13 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
                 logger.info(f"✅ Cross-posted: {video_path}")
             else:
                 logger.warning(f"⚠️ Failed to cross-post: {video_path} - {result.get('error', 'Unknown error')}")
+
+    try:
+        backup_materials = backup_cache_videos_to_utc_folder()
+        if backup_materials:
+            downloaded_videos = backup_materials
+    except Exception as exc:
+        logger.warning(f"failed to backup cache_videos: {str(exc)}")
 
     kwargs = {
         "videos": final_video_paths,

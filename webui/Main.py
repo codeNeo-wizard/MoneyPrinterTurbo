@@ -658,7 +658,7 @@ with middle_panel:
             ],  # The label is displayed to the user
         )
         params.video_aspect = VideoAspect(video_aspect_ratios[selected_index][1])
-
+        # 片段截取时长,单位为秒
         params.video_clip_duration = st.selectbox(
             tr("Clip Duration"), options=[2, 3, 4, 5, 6, 7, 8, 9, 10], index=1
         )
@@ -974,7 +974,11 @@ with right_panel:
 
         stroke_cols = st.columns([0.3, 0.7])
         with stroke_cols[0]:
-            params.stroke_color = st.color_picker(tr("Stroke Color"), "#000000")
+            saved_stroke_color = config.ui.get("stroke_color", "#808080")
+            params.stroke_color = st.color_picker(
+                tr("Stroke Color"), saved_stroke_color
+            )
+            config.ui["stroke_color"] = params.stroke_color
         with stroke_cols[1]:
             params.stroke_width = st.slider(tr("Stroke Width"), 0.0, 10.0, 1.5)
     with st.expander(tr("Click to show API Key management"), expanded=False):

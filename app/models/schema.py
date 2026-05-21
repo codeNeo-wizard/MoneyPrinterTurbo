@@ -102,7 +102,7 @@ class VideoParams(BaseModel):
     text_background_color: Union[bool, str] = True
 
     font_size: int = 60
-    stroke_color: Optional[str] = "#000000"
+    stroke_color: Optional[str] = "#808080"
     stroke_width: float = 1.5
     n_threads: Optional[int] = 2
     paragraph_number: Optional[int] = 1
@@ -122,7 +122,7 @@ class SubtitleRequest(BaseModel):
     text_fore_color: Optional[str] = "#FFFFFF"
     text_background_color: Union[bool, str] = True
     font_size: int = 60
-    stroke_color: Optional[str] = "#000000"
+    stroke_color: Optional[str] = "#808080"
     stroke_width: float = 1.5
     video_source: Optional[str] = "local"
     subtitle_enabled: Optional[str] = "true"

@@ -438,20 +438,40 @@ def generate_script(
     prompt = f"""
 # Role: Video Script Generator
 
+## Profile:
+You are an expert political commentator and senior scriptwriter for authoritative media. You excel at dissecting Chinese policy, macroeconomics, and social trends. You turn complex data into powerful, structured video scripts with clear ideological positioning, historical context, grounded livelihood relevance, and strong audiovisual rhythm.
+
 ## Goals:
-Generate a script for a video, depending on the subject of the video.
+1. Conduct deep internal analysis using the 6 Core Dimensions of Political Journalism.
+2. Write a comprehensive commentary script for video narration, depending on the subject of the video.
+3. Produce a script that is authoritative, concise, vivid, and easy to visualize in editing.
 
-## Constrains:
-1. the script is to be returned as a string with the specified number of paragraphs.
-2. do not under any circumstance reference this prompt in your response.
-3. get straight to the point, don't start with unnecessary things like, "welcome to this video".
-4. you must not include any type of markdown or formatting in the script, never use a title.
-5. only return the raw content of the script.
-6. do not include "voiceover", "narrator" or similar indicators of what should be spoken at the beginning of each paragraph or line.
-7. you must not mention the prompt, or anything about the script itself. also, never talk about the amount of paragraphs or lines. just write the script.
-8. respond in the same language as the video subject.
+## Analytical Framework (The 6 Core Dimensions):
+1. Policy Alignment: What national long-term strategy does this serve?
+2. Current Pain Points: Why is this issue surfacing now, and what contradiction triggered it?
+3. Stakeholders and Livelihood: Who benefits directly, and how does it affect ordinary people?
+4. Vertical History: How does this improve on earlier policy versions or historical conditions?
+5. Horizontal Comparison: How does this compare with global practices or other regions?
+6. Future Path: What are the execution difficulties, missing links, or future milestones?
 
-# Initialization:
+## Scriptwriting Structure (The Standard 4-Step Commentary Method):
+Follow this exact logic in the script:
+1. Hook and Core Conclusion: Open with a sharp, authoritative conclusion. Do not waste time on greetings.
+2. Trace the Origin: Explain the historical background by contrasting past limitations with present breakthroughs.
+3. Deep Dissection: Select 2 strong sub-categories or impact dimensions. Explain both the micro impact on people or industries and the macro significance for national strategy.
+4. Rational Outlook: End with grounded execution challenges, practical constraints, and future outlook.
+
+## Writing Requirements:
+1. Return only the raw script as plain text with the requested number of paragraphs.
+2. Do not mention the prompt, the framework, the number of paragraphs, or your analysis process.
+3. Do not use markdown, bullet points, titles, brackets, labels such as "voiceover" or "narrator", or any extra explanation.
+4. Each paragraph must be information-dense, logically connected, and suitable for direct voice narration.
+5. The tone must be authoritative, sober, rational, and persuasive, avoiding empty slogans and exaggerated emotional language.
+6. The script should be easy to visualize, with concrete policy scenes, livelihood details, industrial contexts, infrastructure, institutions, or public-service imagery when relevant.
+7. Get straight to the point. Do not begin with generic openings such as "welcome to this video".
+8. Respond in the same language as the video subject unless a language is explicitly provided below.
+
+## Context:
 - video subject: {video_subject}
 - number of paragraphs: {paragraph_number}
 """.strip()
@@ -506,22 +526,44 @@ Generate a script for a video, depending on the subject of the video.
     return final_script.strip()
 
 
-def generate_terms(video_subject: str, video_script: str, amount: int = 5) -> List[str]:
+def generate_terms(video_subject: str, video_script: str, amount: int = 20) -> List[str]:
     prompt = f"""
 # Role: Video Search Terms Generator
 
-## Goals:
-Generate {amount} search terms for stock videos, depending on the subject of a video.
+## Profile:
+You are an expert political commentator and senior scriptwriter for authoritative media. You excel at dissecting Chinese policy, macroeconomics, and social trends. You turn complex data into powerful, structured video scripts, and you have a master-level understanding of how to translate textual narratives into visual cues for video editing.
 
-## Constrains:
-1. the search terms are to be returned as a json-array of strings.
-2. each search term should consist of 1-3 words, always add the main subject of the video.
-3. you must only return the json-array of strings. you must not return anything else. you must not return the script.
-4. the search terms must be related to the subject of the video.
-5. reply with english search terms only.
+## Goals:
+1. Internal Deep Analysis: Evaluate the input through the 6 Core Dimensions of Political Journalism.
+2. Mental Scriptwriting: Construct a hidden 3-part narrative with the Standard 4-Step Commentary Method.
+3. Generate Search Terms: Convert the visualized narrative into {amount} precise English search terms for stock or B-roll videos.
+
+## Analytical Framework (The 6 Core Dimensions):
+1. Policy Alignment: What national long-term strategy does this serve?
+2. Current Pain Points: Why is this happening now, and what contradiction triggered it?
+3. Stakeholders and Livelihood: Who benefits directly, and how does it affect daily life?
+4. Vertical History: How does this improve on past policy versions or historical periods?
+5. Horizontal Comparison: How does this compare with global practices or other regions?
+6. Future Path: What are the implementation challenges, missing pieces, or milestones ahead?
+
+## Scriptwriting Structure (The Standard 4-Step Method):
+Internally write the hidden script in Chinese with this exact logical flow:
+1. Hook and Core Conclusion: Open with a sharp authoritative conclusion and skip long introductions.
+2. Trace the Origin: Use historical comparison to contrast past pain points with present breakthroughs.
+3. Deep Dissection: Choose 2 sub-categories and analyze both micro impacts and macro significance.
+4. Rational Outlook: End with grounded execution challenges and future outlook.
+
+## Constraints for Output:
+1. Return ONLY a valid JSON array of strings.
+2. Do NOT output the hidden analysis or script.
+3. Each search term must be 1-3 English words.
+4. Each search term must be visually filmable and suitable for stock footage retrieval.
+5. Search terms must cover both micro details and macro concepts implied by the hidden script.
+6. Avoid generic words. Always anchor terms to the main subject, China context, policy scene, industry scene, people, infrastructure, or public-service visuals when relevant.
+7. Search terms must be in English only.
 
 ## Output Example:
-["search term 1", "search term 2", "search term 3","search term 4","search term 5"]
+["china high speed train", "elderly pension policy", "beijing urban renewal", "quantum computing lab", "chinese medical insurance"]
 
 ## Context:
 ### Video Subject
@@ -530,7 +572,8 @@ Generate {amount} search terms for stock videos, depending on the subject of a v
 ### Video Script
 {video_script}
 
-Please note that you must use English for generating video search terms; Chinese is not accepted.
+## Execution Instruction:
+Analyze the input using the 6 Core Dimensions. Formulate the hidden script using the Standard 4-Step Method, selecting 2 strong sub-categories where helpful. Translate the visual narrative of that hidden script into {amount} high-quality, precise English search terms for stock footage retrieval. Output ONLY the JSON array now.
 """.strip()
 
     logger.info(f"subject: {video_subject}")
@@ -580,7 +623,7 @@ if __name__ == "__main__":
     print("######################")
     print(script)
     search_terms = generate_terms(
-        video_subject=video_subject, video_script=script, amount=5
+        video_subject=video_subject, video_script=script, amount=20
     )
     print("######################")
     print(search_terms)
