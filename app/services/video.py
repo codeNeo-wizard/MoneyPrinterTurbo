@@ -57,6 +57,31 @@ video_codec = "libx264"
 fps = 30
 
 
+def _build_watermark_clip(
+    video_width: int, video_height: int, duration: float
+) -> ImageClip | None:
+    watermark_path = utils.storage_dir(os.path.join("watermark", "context.png"))
+    if not os.path.exists(watermark_path):
+        logger.info(f"watermark file not found, skipping overlay: {watermark_path}")
+        return None
+
+    watermark_clip, watermark_source_path = _open_image_clip_with_fallback(watermark_path)
+    max_width = max(1, int(video_width * 0.35))
+    max_height = max(1, int(video_height * 0.35))
+
+    if watermark_clip.w > max_width or watermark_clip.h > max_height:
+        width_ratio = max_width / watermark_clip.w
+        height_ratio = max_height / watermark_clip.h
+        watermark_clip = watermark_clip.resized(
+            min(width_ratio, height_ratio)
+        )
+
+    if watermark_source_path != watermark_path and os.path.exists(watermark_source_path):
+        delete_files(watermark_source_path)
+
+    return watermark_clip.with_duration(duration).with_position(("center", "center"))
+
+
 def get_ffmpeg_binary():
     # 优先复用用户在 config.toml / 环境变量里显式指定的 ffmpeg，可避免
     # Windows 便携包、Docker、自定义安装目录等场景下 PATH 不一致。
@@ -594,6 +619,14 @@ def generate_video(
             clip = create_text_clip(subtitle_item=item)
             text_clips.append(clip)
         video_clip = CompositeVideoClip([video_clip, *text_clips])
+
+    watermark_clip = _build_watermark_clip(
+        video_width=video_width,
+        video_height=video_height,
+        duration=video_clip.duration,
+    )
+    if watermark_clip is not None:
+        video_clip = CompositeVideoClip([video_clip, watermark_clip])
 
     bgm_file = get_bgm_file(bgm_type=params.bgm_type, bgm_file=params.bgm_file)
     if bgm_file:

@@ -55,7 +55,7 @@ def backup_cache_videos_to_utc_folder():
             renamed_index += 1
 
     shutil.rmtree(cache_dir)
-    logger.info(
+    logger.success(
         f"backed up cache_videos to {backup_dir} and removed original cache directory"
     )
     return backup_paths

@@ -6,7 +6,7 @@ import types
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from moviepy import (
     VideoFileClip,
 )
@@ -90,6 +90,37 @@ class TestVideoService(unittest.TestCase):
             self.assertGreater(clip.duration, 0)
         finally:
             vd.close_clip(clip)
+
+    def test_generate_video_applies_center_watermark_overlay(self):
+        fake_video_clip = MagicMock()
+        fake_video_clip.duration = 6
+        fake_video_clip.with_audio.return_value = fake_video_clip
+
+        fake_audio_clip = MagicMock()
+        fake_audio_clip.fps = 44100
+
+        fake_watermark_clip = MagicMock()
+        params = vd.VideoParams(video_subject="test")
+
+        with patch.object(vd, "_open_video_clip_quietly", return_value=fake_video_clip), patch.object(
+            vd, "AudioFileClip"
+        ) as audio_file_clip, patch.object(vd, "_build_watermark_clip", return_value=fake_watermark_clip), patch.object(
+            vd, "get_bgm_file", return_value=""
+        ), patch.object(
+            vd, "CompositeVideoClip", side_effect=lambda clips, size=None: fake_video_clip
+        ) as composite_video_clip:
+            audio_file_clip.return_value.with_effects.return_value = fake_audio_clip
+
+            vd.generate_video(
+                video_path="video.mp4",
+                audio_path="audio.mp3",
+                subtitle_path="",
+                output_file="/tmp/output.mp4",
+                params=params,
+            )
+
+        composite_video_clip.assert_called_once_with([fake_video_clip, fake_watermark_clip])
+        fake_video_clip.write_videofile.assert_called_once()
     
     def test_wrap_text(self):
         """test text wrapping function"""
