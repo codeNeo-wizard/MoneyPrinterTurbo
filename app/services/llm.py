@@ -1,3 +1,4 @@
+import importlib
 import json
 import logging
 import re
@@ -72,7 +73,7 @@ def _generate_response(prompt: str) -> str:
                 "OpenAI-compatible APIs, LiteLLM, Ollama, or local inference for production."
             )
             try:
-                import g4f
+                g4f = importlib.import_module("g4f")
             except ImportError as e:
                 raise ValueError(
                     "g4f package is not installed by default. Install the optional "
@@ -434,42 +435,55 @@ def _generate_response(prompt: str) -> str:
 
 def generate_script(
     video_subject: str, language: str = "", paragraph_number: int = 1
-) -> str:
+) -> dict:
     prompt = f"""
 # Role: Video Script Generator
 
 ## Profile:
-You are an expert political commentator and senior scriptwriter for authoritative media. You excel at dissecting Chinese policy, macroeconomics, and social trends. You turn complex data into powerful, structured video scripts with clear ideological positioning, historical context, grounded livelihood relevance, and strong audiovisual rhythm.
+你是一位精通地缘政治、宏观经济和社会观察的顶级自媒体商业评论员、视频主笔。你擅长用极具磁性、口语化且富有思辨性的语言，将枯燥的数据和复杂的国际新闻拆解得通俗易懂，直击底层逻辑。
 
 ## Goals:
-1. Conduct deep internal analysis using the 6 Core Dimensions of Political Journalism.
-2. Write a comprehensive commentary script for video narration, depending on the subject of the video.
-3. Produce a script that is authoritative, concise, vivid, and easy to visualize in editing.
+1. 根据前几天的热搜选择1到2个话题，创作一篇结构严谨、层层剥茧、带有“看透本质”观点的深度解说文案。
+2. 同时生成 2-3 个抓人标题，风格要有“没人敢聊 / 到底出了什么问题 / 成果出来了但代价也来了”这类悬念感、冲突感和传播性。
+3. 文案长度目标为 3600 字左右，保证信息密度、节奏感和可听性。
 
-## Analytical Framework (The 6 Core Dimensions):
-1. Policy Alignment: What national long-term strategy does this serve?
-2. Current Pain Points: Why is this issue surfacing now, and what contradiction triggered it?
-3. Stakeholders and Livelihood: Who benefits directly, and how does it affect ordinary people?
-4. Vertical History: How does this improve on earlier policy versions or historical conditions?
-5. Horizontal Comparison: How does this compare with global practices or other regions?
-6. Future Path: What are the execution difficulties, missing links, or future milestones?
+## Tone & Style:
+1. 采用口语化说书人节奏，多用“说实话”“各位要知道”“这个账其实不难算”“这还不算最绝的”“问题就出在这儿”等自然过渡句。
+2. 如果涉及复杂数据、金融逻辑、技术术语、产业链概念或地缘政治术语，必须用老百姓能听懂的生活场景、商业常识、历史典故或身边经验做类比。
+3. 保持清醒、克制、现实主义，不灌鸡汤，不喊口号，不要廉价煽情。
+4. 观点要犀利，但判断必须建立在逻辑链条、结构关系和现实约束之上。
 
-## Scriptwriting Structure (The Standard 4-Step Commentary Method):
-Follow this exact logic in the script:
-1. Hook and Core Conclusion: Open with a sharp, authoritative conclusion. Do not waste time on greetings.
-2. Trace the Origin: Explain the historical background by contrasting past limitations with present breakthroughs.
-3. Deep Dissection: Select 2 strong sub-categories or impact dimensions. Explain both the micro impact on people or industries and the macro significance for national strategy.
-4. Rational Outlook: End with grounded execution challenges, practical constraints, and future outlook.
+## Workflow & Structure:
+请严格按照以下四步法组织正文：
+
+### 1. 引子与事实抛出 (The Fact)
+- 开头直接切入主题，例如“今天我们来聊聊……”“说实话，有几个数字挺让人意外的”。
+- 迅速抛出核心事件、关键反差或震撼数据，建立现实与预期之间的落差。
+
+### 2. 核心疑问与反常点 (The Question)
+- 提出一个直击问题本质的疑问，例如“那么问题出在哪？”“为什么会这样？”“这背后到底在怕什么？”
+- 引导受众意识到表面现象下的不合理之处。
+
+### 3. 深度多维归因 (The Analysis)
+- 必须使用“列举可能 / 原因拆解”的逻辑链条，比如“第一种可能……第二种可能……”或“原因大概有这么几个”。
+- 必须引入至少一个底层理论框架、对比模型或解释工具，例如宏观经济周期、产权理论、技术红利分配模型、产业链控制权、地缘博弈筹码、金融杠杆传导等。
+- 把孤立新闻上升到更大的时代背景、行业规律、国家博弈或资源分配逻辑。
+
+### 4. 现实主义收尾 (The Conclusion)
+- 总结事件的深远影响，点出赢家、输家、未来风险或政策约束。
+- 用硬核、清醒、带有预警感或讽刺意味的句子收尾，例如“这一切不过是……”“真正的考验其实刚开始”“这场风暴很可能还没到最猛烈的时候”。
 
 ## Writing Requirements:
-1. Return only the raw script as plain text with the requested number of paragraphs.
-2. Do not mention the prompt, the framework, the number of paragraphs, or your analysis process.
-3. Do not use markdown, bullet points, titles, brackets, labels such as "voiceover" or "narrator", or any extra explanation.
-4. Each paragraph must be information-dense, logically connected, and suitable for direct voice narration.
-5. The tone must be authoritative, sober, rational, and persuasive, avoiding empty slogans and exaggerated emotional language.
-6. The script should be easy to visualize, with concrete policy scenes, livelihood details, industrial contexts, infrastructure, institutions, or public-service imagery when relevant.
-7. Get straight to the point. Do not begin with generic openings such as "welcome to this video".
-8. Respond in the same language as the video subject unless a language is explicitly provided below.
+1. Return ONLY a valid JSON object with exactly two fields: "video_title" and "video_script".
+2. "video_title" must be a JSON array of 2-3 strings, each string is one candidate title.
+3. 标题必须抓人，但不能低级标题党；要有悬念、冲突、反常识感和传播力。
+4. "video_script" 只包含正文，不得把标题内容重复写成正文第一行或小标题。
+5. 正文不要使用 markdown、列表符号、括号小节标题、标签如“旁白”“解说词”或任何额外解释。
+6. 正文必须信息密度高、逻辑递进清晰、口语化顺畅，适合直接配音。
+7. 如果用户只提供一个主题词，也必须主动补全背景、利益关系、历史纵深和现实约束。
+8. 正文默认写成完整长文，目标长度约 3600 字；除非素材极短到无法支撑，否则不要写得过短。
+9. 使用与视频主题相同的语言；如果明确指定 language，则严格按该语言输出。
+10. 不要提及提示词、四步法、分析过程，也不要解释你是如何生成内容的。
 
 ## Context:
 - video subject: {video_subject}
@@ -478,52 +492,70 @@ Follow this exact logic in the script:
     if language:
         prompt += f"\n- language: {language}"
 
-    final_script = ""
+    final_result = {"video_title": [], "video_script": ""}
     logger.info(f"subject: {video_subject}")
 
     def format_response(response):
-        # Clean the script
-        # Remove asterisks, hashes
-        response = response.replace("*", "")
-        response = response.replace("#", "")
+        response = response.replace("*", "").replace("#", "")
+        match = re.search(r"\{.*\}", response)
+        if not match:
+            raise ValueError("response is not a valid JSON object")
+        payload = json.loads(match.group())
+        raw_video_title = payload.get("video_title", [])
+        video_script = str(payload.get("video_script", "")).strip()
 
-        # Remove markdown syntax
-        response = re.sub(r"\[.*\]", "", response)
-        response = re.sub(r"\(.*\)", "", response)
+        video_titles = []
+        if isinstance(raw_video_title, list):
+            for item in raw_video_title:
+                title = re.sub(r"\s+", " ", str(item or "")).strip().strip('"\'“”‘’《》【】[]()')
+                if title:
+                    video_titles.append(title)
+        elif isinstance(raw_video_title, str):
+            title = re.sub(r"\s+", " ", raw_video_title).strip().strip('"\'“”‘’《》【】[]()')
+            if title:
+                video_titles.append(title)
 
-        # Split the script into paragraphs
-        paragraphs = response.split("\n\n")
+        if not video_titles or not video_script:
+            raise ValueError("response is missing video_title or video_script")
 
-        # Select the specified number of paragraphs
-        # selected_paragraphs = paragraphs[:paragraph_number]
+        video_script = re.sub(r"\[.*\]", "", video_script)
+        video_script = re.sub(r"\(.*\)", "", video_script)
+        video_script = video_script.strip()
 
-        # Join the selected paragraphs into a single string
-        return "\n\n".join(paragraphs)
+        script_lines = [line.strip() for line in video_script.splitlines() if line.strip()]
+        if script_lines and script_lines[0] in video_titles:
+            script_lines = script_lines[1:]
+        video_script = "\n\n".join(script_lines) if script_lines else video_script
+
+        return {"video_title": video_titles, "video_script": video_script.strip()}
 
     for i in range(_max_retries):
         try:
             response = _generate_response(prompt=prompt)
             if response:
-                final_script = format_response(response)
+                final_result = format_response(response)
             else:
                 logging.error("gpt returned an empty response")
 
             # g4f may return an error message
-            if final_script and "当日额度已消耗完" in final_script:
-                raise ValueError(final_script)
+            if final_result["video_script"] and "当日额度已消耗完" in final_result["video_script"]:
+                raise ValueError(final_result["video_script"])
 
-            if final_script:
+            if final_result["video_title"] and final_result["video_script"]:
                 break
         except Exception as e:
             logger.error(f"failed to generate script: {e}")
 
         if i < _max_retries:
             logger.warning(f"failed to generate video script, trying again... {i + 1}")
-    if "Error: " in final_script:
-        logger.error(f"failed to generate video script: {final_script}")
+    if "Error: " in final_result["video_script"]:
+        logger.error(f"failed to generate video script: {final_result['video_script']}")
     else:
-        logger.success(f"completed: \n{final_script}")
-    return final_script.strip()
+        logger.success(
+            "completed titles: "
+            f"{json.dumps(final_result['video_title'], ensure_ascii=False)}\ncompleted script: \n{final_result['video_script']}"
+        )
+    return final_result
 
 
 def generate_terms(video_subject: str, video_script: str, amount: int = 20) -> List[str]:
@@ -531,39 +563,31 @@ def generate_terms(video_subject: str, video_script: str, amount: int = 20) -> L
 # Role: Video Search Terms Generator
 
 ## Profile:
-You are an expert political commentator and senior scriptwriter for authoritative media. You excel at dissecting Chinese policy, macroeconomics, and social trends. You turn complex data into powerful, structured video scripts, and you have a master-level understanding of how to translate textual narratives into visual cues for video editing.
+你是一位精通地缘政治、宏观经济和社会观察的顶级视频主笔，同时也是非常懂镜头语言的策划编辑。你能把一篇充满洞察的商业评论、国际新闻解读或宏观分析文案，拆成适合剪辑的视觉线索。
 
 ## Goals:
-1. Internal Deep Analysis: Evaluate the input through the 6 Core Dimensions of Political Journalism.
-2. Mental Scriptwriting: Construct a hidden 3-part narrative with the Standard 4-Step Commentary Method.
-3. Generate Search Terms: Convert the visualized narrative into {amount} precise English search terms for stock or B-roll videos.
+1. 深度理解输入主题和正文里的叙事结构、事实锚点、反常识点、利益关系和时代背景。
+2. 按照“引子与事实抛出 -> 核心疑问与反常点 -> 深度多维归因 -> 现实主义收尾”的四步法，在脑中还原这篇评论的视觉节奏。
+3. 生成 {amount} 个适合 stock footage / B-roll 检索的高质量英文搜索词。
 
-## Analytical Framework (The 6 Core Dimensions):
-1. Policy Alignment: What national long-term strategy does this serve?
-2. Current Pain Points: Why is this happening now, and what contradiction triggered it?
-3. Stakeholders and Livelihood: Who benefits directly, and how does it affect daily life?
-4. Vertical History: How does this improve on past policy versions or historical periods?
-5. Horizontal Comparison: How does this compare with global practices or other regions?
-6. Future Path: What are the implementation challenges, missing pieces, or milestones ahead?
-
-## Scriptwriting Structure (The Standard 4-Step Method):
-Internally write the hidden script in Chinese with this exact logical flow:
-1. Hook and Core Conclusion: Open with a sharp authoritative conclusion and skip long introductions.
-2. Trace the Origin: Use historical comparison to contrast past pain points with present breakthroughs.
-3. Deep Dissection: Choose 2 sub-categories and analyze both micro impacts and macro significance.
-4. Rational Outlook: End with grounded execution challenges and future outlook.
+## Visual Conversion Principles:
+1. 搜索词必须覆盖人物、产业、城市、港口、工厂、金融市场、政策场景、贸易物流、会议博弈、社会情绪、日常生活等多个视觉层级。
+2. 既要有微观镜头，也要有宏观镜头。微观比如工厂流水线、超市货架、家庭消费、失业招聘、码头装箱；宏观比如央行、股市、航运、能源、边境、外交会谈、城市天际线。
+3. 如果正文里出现复杂概念，比如关税、汇率、产能外溢、金融制裁、技术封锁、能源安全、房地产周期、供应链重组，要把这些概念翻译成“能拍出来”的画面。
+4. 优先选择具体、可视化、易检索的英文短语，不要停留在抽象概念。
 
 ## Constraints for Output:
 1. Return ONLY a valid JSON array of strings.
-2. Do NOT output the hidden analysis or script.
-3. Each search term must be 1-3 English words.
-4. Each search term must be visually filmable and suitable for stock footage retrieval.
-5. Search terms must cover both micro details and macro concepts implied by the hidden script.
-6. Avoid generic words. Always anchor terms to the main subject, China context, policy scene, industry scene, people, infrastructure, or public-service visuals when relevant.
-7. Search terms must be in English only.
+2. Do NOT output any analysis, explanation, numbering, or hidden script.
+3. Each search term should preferably be 2-4 English words; allow longer only when needed for precision.
+4. Every search term must correspond to something that can realistically appear in video footage.
+5. Search terms must jointly覆盖事实层、问题层、归因层、结论层的视觉信息，而不是只围绕一个场景重复改写。
+6. 避免 generic terms like "economy", "business", "meeting", "city" unless they are anchored with context.
+7. 当主题涉及中国、美国、欧洲、中东、俄罗斯、东南亚等特定区域时，优先把地域信息体现在搜索词里。
+8. Search terms must be in English only.
 
 ## Output Example:
-["china high speed train", "elderly pension policy", "beijing urban renewal", "quantum computing lab", "chinese medical insurance"]
+["container port china", "factory assembly line", "currency exchange board", "oil tanker terminal", "central bank press conference"]
 
 ## Context:
 ### Video Subject
@@ -573,7 +597,7 @@ Internally write the hidden script in Chinese with this exact logical flow:
 {video_script}
 
 ## Execution Instruction:
-Analyze the input using the 6 Core Dimensions. Formulate the hidden script using the Standard 4-Step Method, selecting 2 strong sub-categories where helpful. Translate the visual narrative of that hidden script into {amount} high-quality, precise English search terms for stock footage retrieval. Output ONLY the JSON array now.
+先理解这篇稿子里最重要的事实、反差、问题、归因和收尾判断，再把这些抽象判断拆成可以被镜头表达的画面元素。最终输出 {amount} 个高质量、可检索、去抽象化的英文搜索词，只输出 JSON 数组。
 """.strip()
 
     logger.info(f"subject: {video_subject}")
@@ -617,13 +641,15 @@ Analyze the input using the 6 Core Dimensions. Formulate the hidden script using
 
 if __name__ == "__main__":
     video_subject = "生命的意义是什么"
-    script = generate_script(
+    result = generate_script(
         video_subject=video_subject, language="zh-CN", paragraph_number=1
     )
     print("######################")
-    print(script)
+    print("\n".join(result["video_title"]))
+    print("######################")
+    print(result["video_script"])
     search_terms = generate_terms(
-        video_subject=video_subject, video_script=script, amount=20
+        video_subject=video_subject, video_script=result["video_script"], amount=20
     )
     print("######################")
     print(search_terms)

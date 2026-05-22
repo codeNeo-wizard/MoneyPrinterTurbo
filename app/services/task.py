@@ -1,6 +1,7 @@
 import math
 import os
 import os.path
+import random
 import re
 import shutil
 from datetime import datetime, timezone
@@ -10,10 +11,19 @@ from loguru import logger
 
 from app.config import config
 from app.models import const
-from app.models.schema import VideoConcatMode, VideoParams
+from app.models.schema import MaterialInfo, VideoConcatMode, VideoParams
 from app.services import llm, material, subtitle, video, voice, upload_post
 from app.services import state as sm
 from app.utils import utils
+
+
+def _sanitize_video_title_for_filename(video_title: str, fallback_name: str) -> str:
+    sanitized_title = (video_title or "").replace("\\", " ").replace("/", " ").strip()
+    sanitized_title = re.sub(r'[<>:"/\\|?*\x00-\x1f]', " ", sanitized_title)
+    sanitized_title = re.sub(r"\s+", " ", sanitized_title).strip().rstrip(".")
+    if not sanitized_title:
+        sanitized_title = fallback_name
+    return sanitized_title[:80]
 
 
 def backup_cache_videos_to_utc_folder():
@@ -64,21 +74,33 @@ def backup_cache_videos_to_utc_folder():
 def generate_script(task_id, params):
     logger.info("\n\n## generating video script")
     video_script = params.video_script.strip()
+    video_title = ""
     if not video_script:
-        video_script = llm.generate_script(
+        script_result = llm.generate_script(
             video_subject=params.video_subject,
             language=params.video_language,
             paragraph_number=params.paragraph_number,
         )
+        if isinstance(script_result, dict):
+            video_script = script_result.get("video_script", "").strip()
+            raw_video_title = script_result.get("video_title", "")
+            if isinstance(raw_video_title, list):
+                video_title = str(raw_video_title[0]).strip() if raw_video_title else ""
+            else:
+                video_title = str(raw_video_title).strip()
     else:
         logger.debug(f"video script: \n{video_script}")
 
     if not video_script:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         logger.error("failed to generate video script.")
-        return None
+        return None, None
 
-    return video_script
+    if not video_title or "Error: " in video_title:
+        logger.warning("failed to get video title from generate_script, fallback to video_subject")
+        video_title = (params.video_subject or "").strip() or "final"
+
+    return video_script, video_title
 
 
 def generate_terms(task_id, params, video_script):
@@ -106,9 +128,36 @@ def generate_terms(task_id, params, video_script):
     return video_terms
 
 
-def save_script_data(task_id, video_script, video_terms, params):
+def _load_local_materials_from_storage() -> list[MaterialInfo]:
+    local_videos_dir = utils.storage_dir("local_videos", create=True)
+    allowed_extensions = set(const.FILE_TYPE_VIDEOS + const.FILE_TYPE_IMAGES)
+    materials = []
+
+    for filename in sorted(os.listdir(local_videos_dir)):
+        file_path = path.join(local_videos_dir, filename)
+        if not os.path.isfile(file_path):
+            continue
+
+        extension = utils.parse_extension(filename)
+        if extension not in allowed_extensions:
+            continue
+
+        materials.append(
+            MaterialInfo(
+                provider="local",
+                url=file_path,
+                duration=0,
+            )
+        )
+
+    random.shuffle(materials)
+    return materials
+
+
+def save_script_data(task_id, video_title, video_script, video_terms, params):
     script_file = path.join(utils.task_dir(task_id), "script.json")
     script_data = {
+        "title": video_title,
         "script": video_script,
         "search_terms": video_terms,
         "params": params,
@@ -212,6 +261,12 @@ def generate_subtitle(task_id, params, video_script, sub_maker, audio_file):
 def get_video_materials(task_id, params, video_terms, audio_duration):
     if params.video_source == "local":
         logger.info("\n\n## preprocess local materials")
+        if not params.video_materials:
+            params.video_materials = _load_local_materials_from_storage()
+            logger.info(
+                f"loaded {len(params.video_materials)} local materials from storage/local_videos"
+            )
+
         materials = video.preprocess_video(
             materials=params.video_materials, clip_duration=params.video_clip_duration
         )
@@ -243,7 +298,7 @@ def get_video_materials(task_id, params, video_terms, audio_duration):
 
 
 def generate_final_videos(
-    task_id, params, downloaded_videos, audio_file, subtitle_path
+    task_id, params, downloaded_videos, audio_file, subtitle_path, video_title
 ):
     final_video_paths = []
     combined_video_paths = []
@@ -298,7 +353,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5)
 
     # 1. Generate script
-    video_script = generate_script(task_id, params)
+    video_script, video_title = generate_script(task_id, params)
     if not video_script or "Error: " in video_script:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         return
@@ -307,9 +362,13 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
 
     if stop_at == "script":
         sm.state.update_task(
-            task_id, state=const.TASK_STATE_COMPLETE, progress=100, script=video_script
+            task_id,
+            state=const.TASK_STATE_COMPLETE,
+            progress=100,
+            script=video_script,
+            title=video_title,
         )
-        return {"script": video_script}
+        return {"script": video_script, "title": video_title}
 
     # 2. Generate terms
     video_terms = ""
@@ -319,13 +378,17 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
             return
 
-    save_script_data(task_id, video_script, video_terms, params)
+    save_script_data(task_id, video_title, video_script, video_terms, params)
 
     if stop_at == "terms":
         sm.state.update_task(
-            task_id, state=const.TASK_STATE_COMPLETE, progress=100, terms=video_terms
+            task_id,
+            state=const.TASK_STATE_COMPLETE,
+            progress=100,
+            terms=video_terms,
+            title=video_title,
         )
-        return {"script": video_script, "terms": video_terms}
+        return {"script": video_script, "terms": video_terms, "title": video_title}
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=20)
 
@@ -390,7 +453,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
 
     # 6. Generate final videos
     final_video_paths, combined_video_paths = generate_final_videos(
-        task_id, params, downloaded_videos, audio_file, subtitle_path
+        task_id, params, downloaded_videos, audio_file, subtitle_path, video_title
     )
 
     if not final_video_paths:
@@ -408,7 +471,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         for video_path in final_video_paths:
             result = upload_post.cross_post_video(
                 video_path=video_path,
-                title=params.video_subject or "Check out this video! #shorts #viral"
+                title=video_title or params.video_subject or "Check out this video! #shorts #viral"
             )
             cross_post_results.append(result)
             if result.get('success'):

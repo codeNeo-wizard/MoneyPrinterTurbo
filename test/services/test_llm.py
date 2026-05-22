@@ -144,6 +144,24 @@ class TestLiteLLMProvider(unittest.TestCase):
         self.assertIn("Error:", result)
         self.assertIn("g4f package is not installed by default", result)
 
+    def test_generate_script_returns_title_and_body(self):
+        with patch.object(
+            llm,
+            "_generate_response",
+            return_value='{"video_title":"宏观政策正在重塑普通人的机会","video_script":"宏观政策正在重塑普通人的机会\\n经济结构调整正在改变普通人的就业与收入预期。"}',
+        ):
+            result = llm.generate_script(
+                video_subject="政策如何影响生活",
+                language="zh-CN",
+                paragraph_number=1,
+            )
+
+        self.assertEqual(result["video_title"], ["宏观政策正在重塑普通人的机会"])
+        self.assertEqual(
+            result["video_script"],
+            "经济结构调整正在改变普通人的就业与收入预期。",
+        )
+
 
 FOUNDRY_KEY = os.environ.get("ANTHROPIC_FOUNDRY_API_KEY", "")
 FOUNDRY_BASE = "https://amanrai-test-resource.services.ai.azure.com/anthropic"

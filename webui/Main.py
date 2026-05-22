@@ -60,6 +60,8 @@ system_locale = utils.get_system_locale()
 
 if "video_subject" not in st.session_state:
     st.session_state["video_subject"] = ""
+if "video_title" not in st.session_state:
+    st.session_state["video_title"] = ""
 if "video_script" not in st.session_state:
     st.session_state["video_script"] = ""
 if "video_terms" not in st.session_state:
@@ -542,8 +544,14 @@ with left_panel:
             tr("Generate Video Script and Keywords"), key="auto_generate_script"
         ):
             with st.spinner(tr("Generating Video Script and Keywords")):
-                script = llm.generate_script(
+                script_result = llm.generate_script(
                     video_subject=params.video_subject, language=params.video_language
+                )
+                script = script_result.get("video_script", "") if isinstance(script_result, dict) else script_result
+                video_titles = (
+                    script_result.get("video_title", [])
+                    if isinstance(script_result, dict)
+                    else []
                 )
                 terms = llm.generate_terms(params.video_subject, script)
                 if "Error: " in script:
@@ -551,8 +559,12 @@ with left_panel:
                 elif "Error: " in terms:
                     st.error(tr(terms))
                 else:
+                    st.session_state["video_title"] = "\n".join(video_titles)
                     st.session_state["video_script"] = script
                     st.session_state["video_terms"] = ", ".join(terms)
+        st.session_state["video_title"] = st.text_area(
+            tr("Video Titles"), value=st.session_state["video_title"], height=120
+        )
         params.video_script = st.text_area(
             tr("Video Script"), value=st.session_state["video_script"], height=280
         )
@@ -650,6 +662,7 @@ with middle_panel:
         ]
         selected_index = st.selectbox(
             tr("Video Ratio"),
+            index=1,
             options=range(
                 len(video_aspect_ratios)
             ),  # Use the index as the internal option value
@@ -660,7 +673,7 @@ with middle_panel:
         params.video_aspect = VideoAspect(video_aspect_ratios[selected_index][1])
         # 片段截取时长,单位为秒
         params.video_clip_duration = st.selectbox(
-            tr("Clip Duration"), options=[2, 3, 4, 5, 6, 7, 8, 9, 10], index=1
+            tr("Clip Duration"), options=[2, 3, 4, 5, 6, 7, 8, 9, 10], index=6
         )
         params.video_count = st.selectbox(
             tr("Number of Videos Generated Simultaneously"),
