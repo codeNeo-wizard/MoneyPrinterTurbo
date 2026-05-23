@@ -122,23 +122,6 @@ class TestVideoService(unittest.TestCase):
         composite_video_clip.assert_called_once_with([fake_video_clip, fake_watermark_clip])
         fake_video_clip.write_videofile.assert_called_once()
 
-    def test_build_subtitle_text_clips_uses_threads_and_keeps_order(self):
-        subtitles = [
-            ((0, 1), "first"),
-            ((1, 2), "second"),
-            ((2, 3), "third"),
-        ]
-
-        def fake_create_text_clip(item):
-            return item[1].upper()
-
-        text_clips = vd._build_subtitle_text_clips(
-            subtitles=subtitles,
-            create_text_clip=fake_create_text_clip,
-            n_threads=3,
-        )
-
-        self.assertEqual(text_clips, ["FIRST", "SECOND", "THIRD"])
     
     def test_wrap_text(self):
         """test text wrapping function"""

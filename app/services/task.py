@@ -85,22 +85,25 @@ def generate_script(task_id, params):
             video_script = script_result.get("video_script", "").strip()
             raw_video_title = script_result.get("video_title", "")
             if isinstance(raw_video_title, list):
-                video_title = str(raw_video_title[0]).strip() if raw_video_title else ""
+                video_title_list = [str(t).strip() for t in raw_video_title if str(t).strip()]
+                video_title = video_title_list[0] if video_title_list else ""
             else:
                 video_title = str(raw_video_title).strip()
+                video_title_list = [video_title] if video_title else []
     else:
         logger.debug(f"video script: \n{video_script}")
 
     if not video_script:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         logger.error("failed to generate video script.")
-        return None, None
+        return None, None, []
 
     if not video_title or "Error: " in video_title:
         logger.warning("failed to get video title from generate_script, fallback to video_subject")
         video_title = (params.video_subject or "").strip() or "final"
+        video_title_list = [video_title]
 
-    return video_script, video_title
+    return video_script, video_title, video_title_list
 
 
 def generate_terms(task_id, params, video_script):
@@ -154,10 +157,11 @@ def _load_local_materials_from_storage() -> list[MaterialInfo]:
     return materials
 
 
-def save_script_data(task_id, video_title, video_script, video_terms, params):
+def save_script_data(task_id, video_title, video_script, video_terms, params, video_title_list=None):
     script_file = path.join(utils.task_dir(task_id), "script.json")
     script_data = {
         "title": video_title,
+        "video_title": video_title_list if video_title_list is not None else [video_title],
         "script": video_script,
         "search_terms": video_terms,
         "params": params,
@@ -353,7 +357,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5)
 
     # 1. Generate script
-    video_script, video_title = generate_script(task_id, params)
+    video_script, video_title, video_title_list = generate_script(task_id, params)
     if not video_script or "Error: " in video_script:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         return
@@ -378,7 +382,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
             return
 
-    save_script_data(task_id, video_title, video_script, video_terms, params)
+    save_script_data(task_id, video_title, video_script, video_terms, params, video_title_list)
 
     if stop_at == "terms":
         sm.state.update_task(

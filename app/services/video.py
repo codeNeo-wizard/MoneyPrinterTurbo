@@ -6,7 +6,6 @@ import random
 import gc
 import shutil
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from typing import List
 from loguru import logger
@@ -80,7 +79,7 @@ def _build_watermark_clip(
     if watermark_source_path != watermark_path and os.path.exists(watermark_source_path):
         delete_files(watermark_source_path)
     # 水印默认放在右侧中间位置，避免遮挡视频主体内容；如果需要更灵活的水印位置控制，可以在 params 里增加相关配置项。
-    return watermark_clip.with_duration(duration).with_position(("right", "center"))
+    return watermark_clip.with_duration(duration).with_position(("center", "center"))
 
 
 def get_ffmpeg_binary():
@@ -505,24 +504,6 @@ def wrap_text(text, max_width, font="Arial", fontsize=60):
     height = len(_wrapped_lines_) * height
     return result, height
 
-
-def _build_subtitle_text_clips(subtitles, create_text_clip, n_threads: int | None):
-    subtitle_items = list(subtitles or [])
-    if not subtitle_items:
-        return []
-
-    worker_count = max(1, int(n_threads or 1))
-    if worker_count == 1 or len(subtitle_items) == 1:
-        return [create_text_clip(item) for item in subtitle_items]
-
-    worker_count = min(worker_count, len(subtitle_items))
-    logger.info(
-        f"subtitle rendering using {worker_count} threads for {len(subtitle_items)} items"
-    )
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        return list(executor.map(create_text_clip, subtitle_items))
-
-
 def generate_video(
     video_path: str,
     audio_path: str,
@@ -633,11 +614,10 @@ def generate_video(
         sub = SubtitlesClip(
             subtitles=subtitle_path, encoding="utf-8", make_textclip=make_textclip
         )
-        text_clips = _build_subtitle_text_clips(
-            subtitles=sub.subtitles,
-            create_text_clip=create_text_clip,
-            n_threads=params.n_threads,
-        )
+        text_clips = []
+        for item in sub.subtitles:
+            clip = create_text_clip(subtitle_item=item)
+            text_clips.append(clip)
         video_clip = CompositeVideoClip([video_clip, *text_clips])
         logger.info("subtitle composition completed")
     else:
@@ -676,7 +656,7 @@ def generate_video(
         audio_fps=output_audio_fps,
         audio_bitrate=audio_bitrate,
         temp_audiofile_path=output_dir,
-        threads=params.n_threads or 2,
+        threads=params.n_threads or 32,
         logger="bar",
         fps=fps,
     )
