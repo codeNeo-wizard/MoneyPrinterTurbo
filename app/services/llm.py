@@ -558,7 +558,7 @@ def generate_script(
     return final_result
 
 
-def generate_terms(video_subject: str, video_script: str, amount: int = 20) -> List[str]:
+def generate_terms(video_subject: str, video_script: str, amount: int = 3) -> List[str]:
     prompt = f"""
 # Role: Video Search Terms Generator
 
@@ -587,7 +587,7 @@ def generate_terms(video_subject: str, video_script: str, amount: int = 20) -> L
 8. Search terms must be in English only.
 
 ## Output Example:
-["container port china", "factory assembly line", "currency exchange board", "oil tanker terminal", "central bank press conference"]
+["search term 1", "search term 2", "search term 3"]
 
 ## Context:
 ### Video Subject
@@ -649,7 +649,7 @@ if __name__ == "__main__":
     print("######################")
     print(result["video_script"])
     search_terms = generate_terms(
-        video_subject=video_subject, video_script=result["video_script"], amount=20
+        video_subject=video_subject, video_script=result["video_script"], amount=3
     )
     print("######################")
     print(search_terms)
