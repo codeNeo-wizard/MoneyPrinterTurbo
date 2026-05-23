@@ -90,7 +90,7 @@ class VideoParams(BaseModel):
     voice_name: Optional[str] = ""
     voice_volume: Optional[float] = 1.0
     voice_rate: Optional[float] = 1.0
-    bgm_type: Optional[str] = "random"
+    bgm_type: Optional[str] = config.ui.get("bgm_type", "random")
     bgm_file: Optional[str] = ""
     bgm_volume: Optional[float] = 0.2
 
@@ -114,7 +114,7 @@ class SubtitleRequest(BaseModel):
     voice_name: Optional[str] = "zh-CN-XiaoxiaoNeural-Female"
     voice_volume: Optional[float] = 1.0
     voice_rate: Optional[float] = 1.2
-    bgm_type: Optional[str] = "random"
+    bgm_type: Optional[str] = config.ui.get("bgm_type", "random")
     bgm_file: Optional[str] = ""
     bgm_volume: Optional[float] = 0.2
     subtitle_position: Optional[str] = config.ui.get("subtitle_position", "bottom")
@@ -134,7 +134,7 @@ class AudioRequest(BaseModel):
     voice_name: Optional[str] = "zh-CN-XiaoxiaoNeural-Female"
     voice_volume: Optional[float] = 1.0
     voice_rate: Optional[float] = 1.2
-    bgm_type: Optional[str] = "random"
+    bgm_type: Optional[str] = config.ui.get("bgm_type", "random")
     bgm_file: Optional[str] = ""
     bgm_volume: Optional[float] = 0.2
     video_source: Optional[str] = "local"

@@ -221,7 +221,13 @@ redis_db = 0
 redis_password = ""
 
 # 文生视频时的最大并发任务数
-max_concurrent_tasks = 5
+max_concurrent_tasks = 16
+
+# 设置背景音乐，有三个合法值："" = 无、"random" = 随机、"custom" = 自定义
+bgm_type = ""
+bgm_type = "random"
+bgm_type = "custom"
+
 
 
 [whisper]

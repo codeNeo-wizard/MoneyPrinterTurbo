@@ -894,9 +894,13 @@ with middle_panel:
             (tr("Random Background Music"), "random"),
             (tr("Custom Background Music"), "custom"),
         ]
+        _saved_bgm_type = config.ui.get("bgm_type", "random")
+        _bgm_default_index = next(
+            (i for i, opt in enumerate(bgm_options) if opt[1] == _saved_bgm_type), 1
+        )
         selected_index = st.selectbox(
             tr("Background Music"),
-            index=1,
+            index=_bgm_default_index,
             options=range(
                 len(bgm_options)
             ),  # Use the index as the internal option value
