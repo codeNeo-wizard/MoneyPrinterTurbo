@@ -1098,7 +1098,7 @@ if start_button:
         params.custom_audio_file = custom_audio_path
 
     if uploaded_files:
-        local_videos_dir = utils.storage_dir("local_videos", create=True)
+        local_videos_dir = utils.storage_dir("local_videos_en", create=True)
         # 每次重新上传时都以本次选择的素材为准，避免旧素材不断重复追加。
         params.video_materials = []
         persisted_local_materials = []

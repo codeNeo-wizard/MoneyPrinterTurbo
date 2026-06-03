@@ -129,7 +129,7 @@ def generate_terms(task_id, params, video_script):
 
 
 def _load_local_materials_from_storage() -> list[MaterialInfo]:
-    local_videos_dir = utils.storage_dir("local_videos", create=True)
+    local_videos_dir = utils.storage_dir("local_videos_en", create=True)
     allowed_extensions = set(const.FILE_TYPE_VIDEOS + const.FILE_TYPE_IMAGES)
     materials = []
 
@@ -264,7 +264,7 @@ def get_video_materials(task_id, params, video_terms, audio_duration):
         if not params.video_materials:
             params.video_materials = _load_local_materials_from_storage()
             logger.info(
-                f"loaded {len(params.video_materials)} local materials from storage/local_videos"
+                f"loaded {len(params.video_materials)} local materials from storage/local_videos_en"
             )
 
         materials = video.preprocess_video(

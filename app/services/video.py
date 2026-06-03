@@ -60,7 +60,7 @@ fps = 30
 def _build_watermark_clip(
     video_width: int, video_height: int, duration: float
 ) -> ImageClip | None:
-    watermark_path = utils.storage_dir(os.path.join("watermark", "context.png"))
+    watermark_path = utils.storage_dir(os.path.join("watermark_en", "context.png"))
     if not os.path.exists(watermark_path):
         logger.info(f"watermark file not found, skipping overlay: {watermark_path}")
         return None

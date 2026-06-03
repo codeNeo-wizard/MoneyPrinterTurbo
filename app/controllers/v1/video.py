@@ -275,7 +275,7 @@ def upload_bgm_file(request: Request, file: UploadFile = File(...)):
 )
 def get_video_materials_list(request: Request):
     allowed_suffixes = ("mp4", "mov", "avi", "flv", "mkv", "jpg", "jpeg", "png")
-    local_videos_dir = utils.storage_dir("local_videos", create=True)
+    local_videos_dir = utils.storage_dir("local_videos_en", create=True)
     files = []
     for suffix in allowed_suffixes:
         files.extend(glob.glob(os.path.join(local_videos_dir, f"*.{suffix}")))
@@ -308,7 +308,7 @@ def upload_video_material_file(request: Request, file: UploadFile = File(...)):
     normalized_filename = safe_filename.lower()
     # 统一按小写扩展名校验，兼容 .MOV 这类大写后缀文件。
     if normalized_filename.endswith(allowed_suffixes):
-        local_videos_dir = utils.storage_dir("local_videos", create=True)
+        local_videos_dir = utils.storage_dir("local_videos_en", create=True)
         save_path = os.path.join(local_videos_dir, safe_filename)
         # save file
         with open(save_path, "wb+") as buffer:

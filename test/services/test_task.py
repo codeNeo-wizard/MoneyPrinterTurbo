@@ -90,7 +90,7 @@ class TestTaskService(unittest.TestCase):
         self.assertEqual(final_video_paths, ["/tmp/task-dir/final-1.mp4"])
         self.assertEqual(combined_video_paths, ["/tmp/task-dir/combined-1.mp4"])
 
-    def test_get_video_materials_loads_storage_local_videos_when_params_empty(self):
+    def test_get_video_materials_loads_storage_local_videos_en_when_params_empty(self):
         params = SimpleNamespace(
             video_source="local",
             video_materials=[],
@@ -98,7 +98,7 @@ class TestTaskService(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            local_videos_dir = os.path.join(temp_dir, "local_videos")
+            local_videos_dir = os.path.join(temp_dir, "local_videos_en")
             os.makedirs(local_videos_dir)
             local_video_path = os.path.join(local_videos_dir, "sample.mp4")
             with open(local_video_path, "wb") as fp:
